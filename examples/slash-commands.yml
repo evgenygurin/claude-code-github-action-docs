@@ -1,0 +1,145 @@
+name: Claude Slash Commands Examples
+
+# This workflow demonstrates various Claude slash commands
+# Slash commands are pre-built prompts that perform specific tasks
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Slash command to run'
+        required: true
+        type: choice
+        options:
+          - /review
+          - /fix
+          - /test
+          - /optimize
+          - /security-audit
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  # Example 1: Code Review
+  code-review:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.command == '/review')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Review PR for quality and issues
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: "/review"
+          claude_args: |
+            --max-turns 5
+            --model claude-sonnet-4-5-20250929
+
+  # Example 2: Automated Fixes
+  auto-fix:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == '/fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Automatically fix common issues
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            /fix
+            Focus on:
+            - Type errors
+            - Linting issues
+            - Simple bugs
+            - Code formatting
+          claude_args: |
+            --max-turns 15
+            --model claude-sonnet-4-5-20250929
+
+  # Example 3: Generate Tests
+  generate-tests:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == '/test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate test cases
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Generate comprehensive test cases for recently modified code.
+            Follow the existing test patterns in the repository.
+            Include:
+            - Unit tests
+            - Edge cases
+            - Error handling tests
+          claude_args: |
+            --max-turns 12
+            --model claude-sonnet-4-5-20250929
+
+  # Example 4: Code Optimization
+  optimize-code:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == '/optimize'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Optimize code performance
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review the codebase for performance optimization opportunities.
+            Focus on:
+            - Algorithm efficiency
+            - Memory usage
+            - Database queries
+            - API calls
+            Create a PR with optimizations if improvements are found.
+          claude_args: |
+            --max-turns 10
+            --model claude-opus-4-1-20250805
+
+  # Example 5: Security Audit
+  security-audit:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == '/security-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Perform security audit
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Perform a comprehensive security audit of the codebase.
+            Check for:
+            - SQL injection vulnerabilities
+            - XSS vulnerabilities
+            - Authentication/authorization issues
+            - Exposed secrets or credentials
+            - Insecure dependencies
+            - OWASP Top 10 vulnerabilities
+
+            Create an issue with findings and severity levels.
+          claude_args: |
+            --max-turns 8
+            --model claude-opus-4-1-20250805
