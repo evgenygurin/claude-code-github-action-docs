@@ -1,144 +1,144 @@
-# 🚨 СРОЧНО: Ротация скомпрометированных AWS ключей
+# 🚨 URGENT: Rotating Compromised AWS Keys
 
-## ⚠️ КРИТИЧЕСКАЯ СИТУАЦИЯ
+## ⚠️ CRITICAL SITUATION
 
-Ваши AWS credentials были раскрыты и считаются **скомпрометированными**. Необходимо **НЕМЕДЛЕННО** их отозвать и заменить.
+Your AWS credentials have been exposed and are considered **compromised**. You **MUST IMMEDIATELY** revoke and replace them.
 
-## 📋 Немедленные действия (выполнить СЕЙЧАС!)
+## 📋 Immediate Actions (Execute NOW!)
 
-### Шаг 1: Войдите в AWS Console
+### Step 1: Log into AWS Console
 
-1. Перейдите на [https://console.aws.amazon.com](https://console.aws.amazon.com)
-2. Войдите с вашими учетными данными
+1. Navigate to [https://console.aws.amazon.com](https://console.aws.amazon.com)
+2. Sign in with your credentials
 
-### Шаг 2: Отзовите скомпрометированные ключи
+### Step 2: Revoke Compromised Keys
 
-1. Перейдите в **IAM** (Identity and Access Management)
-2. В левом меню выберите **Users** (Пользователи)
-3. Найдите и откройте пользователя, которому принадлежат ключи
-4. Перейдите на вкладку **Security credentials** (Учетные данные безопасности)
-5. В секции **Access keys** найдите:
+1. Go to **IAM** (Identity and Access Management)
+2. In the left menu, select **Users**
+3. Find and open the user who owns the keys
+4. Navigate to the **Security credentials** tab
+5. In the **Access keys** section, locate:
    - Access Key ID: `AKIATATKADR6UBWJ3IMX`
-6. Нажмите **Actions** → **Deactivate** (деактивировать)
-7. После деактивации нажмите **Delete** (удалить)
-8. Подтвердите удаление
+6. Click **Actions** → **Deactivate**
+7. After deactivation, click **Delete**
+8. Confirm deletion
 
-### Шаг 3: Проверьте логи доступа
+### Step 3: Check Access Logs
 
-1. Перейдите в **CloudTrail**
-2. Проверьте **Event history** за последние часы
-3. Фильтруйте по User name (имя пользователя)
-4. Проверьте, нет ли подозрительной активности:
-   - Незнакомые IP адреса
-   - Необычные регионы
-   - Неожиданные действия (создание ресурсов, удаление, изменения)
+1. Navigate to **CloudTrail**
+2. Review **Event history** for the past few hours
+3. Filter by User name
+4. Check for suspicious activity:
+   - Unknown IP addresses
+   - Unusual regions
+   - Unexpected actions (resource creation, deletion, modifications)
 
-### Шаг 4: Оцените потенциальный ущерб
+### Step 4: Assess Potential Damage
 
-Если найдена подозрительная активность:
+If suspicious activity is found:
 
-1. Немедленно обратитесь в AWS Support
-2. Следуйте их инструкциям по устранению инцидента
-3. Проверьте биллинг на неожиданные расходы
-4. Рассмотрите возможность включения AWS GuardDuty для мониторинга
+1. Immediately contact AWS Support
+2. Follow their incident remediation instructions
+3. Check billing for unexpected charges
+4. Consider enabling AWS GuardDuty for monitoring
 
-## ✅ Переход на безопасный метод: OIDC
+## ✅ Transition to Secure Method: OIDC
 
-**НЕ создавайте новые долгоживущие ключи!** Вместо этого используйте OIDC (OpenID Connect) - это безопаснее.
+**DO NOT create new long-lived keys!** Instead, use OIDC (OpenID Connect) - it's more secure.
 
-### Преимущества OIDC:
+### OIDC Advantages:
 
-- ✅ Временные токены (автоматически истекают)
-- ✅ Автоматическая ротация
-- ✅ Нет хранения долгоживущих ключей
-- ✅ Ограничение по репозиторию и ветке
-- ✅ Соответствует лучшим практикам безопасности
+- ✅ Temporary tokens (automatically expire)
+- ✅ Automatic rotation
+- ✅ No storage of long-lived keys
+- ✅ Repository and branch-level restrictions
+- ✅ Complies with security best practices
 
-### Инструкция по настройке OIDC:
+### OIDC Setup Instructions:
 
-См. подробную инструкцию в файле: [`docs/aws-bedrock-oidc-setup.md`](./aws-bedrock-oidc-setup.md)
+See detailed guide in: [`docs/aws-bedrock-oidc-setup.md`](./aws-bedrock-oidc-setup.md)
 
-## 🔒 Если всё же нужны IAM Access Keys
+## 🔒 If IAM Access Keys Are Still Needed
 
-Если OIDC не подходит и нужны Access Keys:
+If OIDC is not suitable and you need Access Keys:
 
-### Создание новых ключей (БЕЗОПАСНО)
+### Creating New Keys (SECURELY)
 
-1. **IAM** → **Users** → ваш пользователь
+1. **IAM** → **Users** → your user
 2. **Security credentials** → **Create access key**
-3. Use case: выберите "Application running outside AWS"
-4. **СРАЗУ ЖЕ** сохраните ключи в безопасное место
-5. **НИКОГДА** не публикуйте их:
-   - ❌ Не в коде
-   - ❌ Не в чате
-   - ❌ Не в документации
-   - ❌ Не в commit messages
-   - ✅ ТОЛЬКО в GitHub Secrets!
+3. Use case: select "Application running outside AWS"
+4. **IMMEDIATELY** save keys to a secure location
+5. **NEVER** publish them:
+   - ❌ Not in code
+   - ❌ Not in chat
+   - ❌ Not in documentation
+   - ❌ Not in commit messages
+   - ✅ ONLY in GitHub Secrets!
 
-### Добавление ключей в GitHub Secrets
+### Adding Keys to GitHub Secrets
 
-1. Откройте ваш репозиторий на GitHub
+1. Open your repository on GitHub
 2. **Settings** → **Secrets and variables** → **Actions**
-3. Нажмите **New repository secret**
+3. Click **New repository secret**
 
-**Первый секрет:**
+**First secret:**
 - Name: `AWS_ACCESS_KEY_ID`
-- Value: ваш новый Access Key ID
+- Value: your new Access Key ID
 - **Add secret**
 
-**Второй секрет:**
+**Second secret:**
 - Name: `AWS_SECRET_ACCESS_KEY`
-- Value: ваш новый Secret Access Key
+- Value: your new Secret Access Key
 - **Add secret**
 
-**Третий секрет (опционально):**
+**Third secret (optional):**
 - Name: `AWS_REGION`
 - Value: `eu-north-1`
 - **Add secret**
 
-## 📊 Мониторинг безопасности
+## 📊 Security Monitoring
 
-### Включите дополнительные меры безопасности:
+### Enable Additional Security Measures:
 
-1. **AWS CloudTrail** - логирование всех действий
-2. **AWS GuardDuty** - обнаружение угроз
-3. **AWS Config** - отслеживание изменений конфигурации
-4. **Cost Anomaly Detection** - мониторинг необычных расходов
+1. **AWS CloudTrail** - logging all actions
+2. **AWS GuardDuty** - threat detection
+3. **AWS Config** - configuration change tracking
+4. **Cost Anomaly Detection** - unusual spending monitoring
 
-### Настройте алерты:
+### Configure Alerts:
 
-1. CloudWatch Alarms для:
-   - Необычного использования API
-   - Попыток доступа из неизвестных IP
-   - Создания дорогих ресурсов
+1. CloudWatch Alarms for:
+   - Unusual API usage
+   - Access attempts from unknown IPs
+   - Creation of expensive resources
 
-2. Billing Alerts для:
-   - Превышения бюджета
-   - Необычного роста расходов
+2. Billing Alerts for:
+   - Budget overruns
+   - Unusual spending growth
 
-## 🛡️ Лучшие практики безопасности
+## 🛡️ Security Best Practices
 
-### Никогда не делайте:
+### Never Do:
 
-- ❌ Не публикуйте credentials в коде
-- ❌ Не отправляйте credentials в чатах/email
-- ❌ Не храните credentials в plain text файлах
-- ❌ Не используйте одни ключи для множества проектов
-- ❌ Не давайте ключам больше прав, чем необходимо
+- ❌ Don't publish credentials in code
+- ❌ Don't send credentials in chats/email
+- ❌ Don't store credentials in plain text files
+- ❌ Don't use the same keys for multiple projects
+- ❌ Don't grant keys more permissions than necessary
 
-### Всегда делайте:
+### Always Do:
 
-- ✅ Используйте OIDC когда возможно
-- ✅ Храните credentials в секретных менеджерах
-- ✅ Применяйте Principle of Least Privilege
-- ✅ Регулярно ротируйте ключи (каждые 90 дней)
-- ✅ Включайте MFA для AWS Console
-- ✅ Мониторьте логи доступа
-- ✅ Используйте AWS Organizations для централизованного управления
+- ✅ Use OIDC when possible
+- ✅ Store credentials in secret managers
+- ✅ Apply Principle of Least Privilege
+- ✅ Regularly rotate keys (every 90 days)
+- ✅ Enable MFA for AWS Console
+- ✅ Monitor access logs
+- ✅ Use AWS Organizations for centralized management
 
-## 📞 Контакты поддержки
+## 📞 Support Contacts
 
-### Если обнаружена подозрительная активность:
+### If Suspicious Activity Is Detected:
 
 **AWS Support:**
 - Email: aws-security@amazon.com
@@ -149,25 +149,25 @@
 - Email: security@github.com
 - Docs: https://docs.github.com/en/code-security
 
-## 📚 Дополнительные ресурсы
+## 📚 Additional Resources
 
 - [AWS Security Best Practices](https://aws.amazon.com/security/best-practices/)
 - [IAM Best Practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 - [GitHub Actions Security](https://docs.github.com/en/actions/security-guides)
 - [OWASP Top 10 for Cloud](https://owasp.org/www-project-cloud-security/)
 
-## ✅ Чеклист безопасности
+## ✅ Security Checklist
 
-После инцидента убедитесь, что выполнено:
+After the incident, ensure that:
 
-- [ ] Старые ключи удалены из AWS
-- [ ] Проверены логи CloudTrail на подозрительную активность
-- [ ] Включены алерты безопасности
-- [ ] Новый метод аутентификации настроен (OIDC рекомендуется)
-- [ ] Документировано, что произошло
-- [ ] Команда проинформирована о правилах безопасности
-- [ ] Включен мониторинг стоимости
+- [ ] Old keys are deleted from AWS
+- [ ] CloudTrail logs checked for suspicious activity
+- [ ] Security alerts enabled
+- [ ] New authentication method configured (OIDC recommended)
+- [ ] Incident documented
+- [ ] Team informed about security policies
+- [ ] Cost monitoring enabled
 
 ---
 
-**Важно:** Безопасность - это процесс, а не одноразовая задача. Регулярно проверяйте и обновляйте ваши меры безопасности!
+**Important:** Security is a process, not a one-time task. Regularly review and update your security measures!

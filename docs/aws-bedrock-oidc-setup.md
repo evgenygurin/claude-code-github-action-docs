@@ -1,53 +1,53 @@
-# AWS Bedrock + OIDC Setup Guide для Claude Code GitHub Actions
+# AWS Bedrock + OIDC Setup Guide for Claude Code GitHub Actions
 
-## 📋 Обзор
+## 📋 Overview
 
-Эта инструкция поможет настроить безопасную интеграцию Claude Code GitHub Actions с AWS Bedrock используя OIDC (OpenID Connect) для региона **eu-north-1** (Stockholm).
+This guide will help you set up secure integration of Claude Code GitHub Actions with AWS Bedrock using OIDC (OpenID Connect) for the **eu-north-1** (Stockholm) region.
 
-### Почему OIDC?
+### Why OIDC?
 
-- ✅ **Безопасность**: Временные токены вместо долгоживущих ключей
-- ✅ **Автоматизация**: Автоматическая ротация credentials
-- ✅ **Гран control**: Ограничение доступа по репозиторию и ветке
-- ✅ **Соответствие best practices**: Рекомендуется AWS и GitHub
+- ✅ **Security**: Temporary tokens instead of long-lived keys
+- ✅ **Automation**: Automatic credential rotation
+- ✅ **Granular Control**: Access restriction by repository and branch
+- ✅ **Best Practices Compliance**: Recommended by AWS and GitHub
 
-## 🎯 Что будет настроено
+## 🎯 What Will Be Configured
 
-1. OIDC Identity Provider в AWS IAM
-2. IAM Role с правами доступа к Bedrock
-3. Trust Policy для вашего GitHub репозитория
-4. GitHub Workflow с OIDC authentication
-5. Минимальные необходимые права (Principle of Least Privilege)
+1. OIDC Identity Provider in AWS IAM
+2. IAM Role with Bedrock access permissions
+3. Trust Policy for your GitHub repository
+4. GitHub Workflow with OIDC authentication
+5. Minimal necessary permissions (Principle of Least Privilege)
 
-## 📝 Предварительные требования
+## 📝 Prerequisites
 
-- [ ] AWS аккаунт с правами администратора IAM
-- [ ] Доступ к Amazon Bedrock включен
-- [ ] Доступ к Claude моделям в регионе `eu-north-1` запрошен
-- [ ] GitHub репозиторий с admin правами
-- [ ] GitHub App установлено (или используется GITHUB_TOKEN)
+- [ ] AWS account with IAM administrator privileges
+- [ ] Amazon Bedrock access enabled
+- [ ] Access to Claude models in `eu-north-1` region requested
+- [ ] GitHub repository with admin privileges
+- [ ] GitHub App installed (or using GITHUB_TOKEN)
 
-## 🔧 Шаг 1: Включение Amazon Bedrock
+## 🔧 Step 1: Enable Amazon Bedrock
 
-### 1.1 Проверка доступа к Bedrock
+### 1.1 Verify Bedrock Access
 
-1. Откройте AWS Console
-2. Перейдите в **Amazon Bedrock**
-3. Убедитесь, что сервис доступен в регионе **EU (Stockholm) eu-north-1**
+1. Open AWS Console
+2. Navigate to **Amazon Bedrock**
+3. Ensure the service is available in **EU (Stockholm) eu-north-1** region
 
-### 1.2 Запрос доступа к моделям Claude
+### 1.2 Request Access to Claude Models
 
-1. В Bedrock Console выберите **Model access** в боковом меню
-2. Нажмите **Manage model access**
-3. Найдите и отметьте модели Anthropic Claude:
+1. In Bedrock Console, select **Model access** in the sidebar
+2. Click **Manage model access**
+3. Find and select Anthropic Claude models:
    - Claude 3.5 Sonnet
-   - Claude 3 Opus (опционально)
-   - Claude 3 Haiku (опционально)
-4. Нажмите **Request model access**
-5. Заполните форму и отправьте запрос
-6. Ожидайте подтверждения (обычно мгновенно или в течение нескольких минут)
+   - Claude 3 Opus (optional)
+   - Claude 3 Haiku (optional)
+4. Click **Request model access**
+5. Fill out the form and submit request
+6. Wait for confirmation (usually instant or within a few minutes)
 
-### Доступные модели в eu-north-1
+### Available Models in eu-north-1
 
 ```text
 eu.anthropic.claude-3-5-sonnet-20241022-v2:0
@@ -55,19 +55,19 @@ eu.anthropic.claude-3-5-haiku-20241022-v1:0
 eu.anthropic.claude-3-opus-20240229-v1:0
 ```
 
-> **Примечание**: Модель ID включает префикс региона `eu.` для европейских регионов.
+> **Note**: Model IDs include the `eu.` region prefix for European regions.
 
-## 🔐 Шаг 2: Настройка OIDC Identity Provider
+## 🔐 Step 2: Configure OIDC Identity Provider
 
-### 2.1 Создание OIDC Provider в AWS
+### 2.1 Create OIDC Provider in AWS
 
-1. Откройте **IAM Console**: https://console.aws.amazon.com/iam/
-2. В левом меню выберите **Identity providers**
-3. Нажмите **Add provider**
+1. Open **IAM Console**: https://console.aws.amazon.com/iam/
+2. In the left menu, select **Identity providers**
+3. Click **Add provider**
 
-### 2.2 Конфигурация провайдера
+### 2.2 Provider Configuration
 
-Заполните форму:
+Fill out the form:
 
 **Provider type**: `OpenID Connect`
 
@@ -81,30 +81,30 @@ https://token.actions.githubusercontent.com
 sts.amazonaws.com
 ```
 
-4. Нажмите **Get thumbprint** (загрузится автоматически)
-5. Нажмите **Add provider**
+4. Click **Get thumbprint** (loads automatically)
+5. Click **Add provider**
 
-### 2.3 Подтверждение создания
+### 2.3 Confirm Creation
 
-После создания вы увидите:
+After creation, you will see:
 ```text
 ARN: arn:aws:iam::YOUR_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com
 ```
 
-Сохраните этот ARN - он понадобится позже.
+Save this ARN - you'll need it later.
 
-## 👤 Шаг 3: Создание IAM Role
+## 👤 Step 3: Create IAM Role
 
-### 3.1 Начало создания роли
+### 3.1 Start Role Creation
 
-1. В IAM Console выберите **Roles** в левом меню
-2. Нажмите **Create role**
+1. In IAM Console, select **Roles** in the left menu
+2. Click **Create role**
 
-### 3.2 Выбор типа доверенной сущности
+### 3.2 Select Trusted Entity Type
 
 **Trusted entity type**: `Web identity`
 
-**Identity provider**: Выберите созданный OIDC provider
+**Identity provider**: Select the created OIDC provider
 ```text
 token.actions.githubusercontent.com
 ```
@@ -114,40 +114,40 @@ token.actions.githubusercontent.com
 sts.amazonaws.com
 ```
 
-### 3.3 Настройка условий доступа (ВАЖНО!)
+### 3.3 Configure Access Conditions (IMPORTANT!)
 
-Нажмите **Add condition** для ограничения доступа:
+Click **Add condition** to restrict access:
 
-**Condition 1 - Ограничение по организации/пользователю:**
+**Condition 1 - Restrict by organization/user:**
 - Condition key: `token.actions.githubusercontent.com:sub`
 - Operator: `StringLike`
-- Value: `repo:evgenygurin/*:*`
-  (это разрешит все ваши репозитории)
+- Value: `repo:YOUR_USERNAME/*:*`
+  (this allows all your repositories)
 
-**ИЛИ для конкретного репозитория:**
-- Value: `repo:evgenygurin/claude-code-github-action-docs:ref:refs/heads/main`
-  (только этот репозиторий и ветка main)
+**OR for a specific repository:**
+- Value: `repo:YOUR_USERNAME/YOUR_REPO:ref:refs/heads/main`
+  (only this repository and main branch)
 
-**Condition 2 - Ограничение по audience:**
+**Condition 2 - Restrict by audience:**
 - Condition key: `token.actions.githubusercontent.com:aud`
 - Operator: `StringEquals`
 - Value: `sts.amazonaws.com`
 
-Нажмите **Next**
+Click **Next**
 
-### 3.4 Присвоение прав (Permissions)
+### 3.4 Assign Permissions
 
-**Вариант A: Использовать готовую политику (проще)**
+**Option A: Use Managed Policy (Easier)**
 
-1. В поиске найдите: `AmazonBedrockFullAccess`
-2. Отметьте эту политику
-3. Нажмите **Next**
+1. Search for: `AmazonBedrockFullAccess`
+2. Select this policy
+3. Click **Next**
 
-**Вариант B: Создать минимальную custom policy (безопаснее)**
+**Option B: Create Minimal Custom Policy (More Secure)**
 
-1. Нажмите **Create policy**
-2. Перейдите на вкладку **JSON**
-3. Вставьте следующую политику:
+1. Click **Create policy**
+2. Go to **JSON** tab
+3. Paste the following policy:
 
 ```json
 {
@@ -166,12 +166,12 @@ sts.amazonaws.com
 }
 ```
 
-4. Нажмите **Next**
+4. Click **Next**
 5. Policy name: `GitHubActionsBedrockMinimal`
-6. Нажмите **Create policy**
-7. Вернитесь к созданию роли и выберите эту политику
+6. Click **Create policy**
+7. Return to role creation and select this policy
 
-### 3.5 Имя и описание роли
+### 3.5 Role Name and Description
 
 **Role name**:
 ```text
@@ -179,13 +179,13 @@ GitHubActionsBedrockRole
 ```
 
 **Description**:
-```bash
+```text
 OIDC role for GitHub Actions to access AWS Bedrock in eu-north-1
 ```
 
-### 3.6 Проверка Trust Policy
+### 3.6 Verify Trust Policy
 
-Перед созданием проверьте Trust policy (автоматически сгенерированную):
+Before creating, verify the Trust policy (automatically generated):
 
 ```json
 {
@@ -202,7 +202,7 @@ OIDC role for GitHub Actions to access AWS Bedrock in eu-north-1
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:evgenygurin/claude-code-github-action-docs:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "repo:YOUR_USERNAME/YOUR_REPO:ref:refs/heads/main"
         }
       }
     }
@@ -210,28 +210,28 @@ OIDC role for GitHub Actions to access AWS Bedrock in eu-north-1
 }
 ```
 
-### 3.7 Создание роли
+### 3.7 Create Role
 
-Нажмите **Create role**
+Click **Create role**
 
-### 3.8 Сохранение Role ARN
+### 3.8 Save Role ARN
 
-После создания скопируйте Role ARN:
+After creation, copy the Role ARN:
 ```text
 arn:aws:iam::YOUR_ACCOUNT_ID:role/GitHubActionsBedrockRole
 ```
 
-**Этот ARN понадобится для GitHub Secrets!**
+**You'll need this ARN for GitHub Secrets!**
 
-## 🔑 Шаг 4: Настройка GitHub Secrets
+## 🔑 Step 4: Configure GitHub Secrets
 
-### 4.1 Добавление секретов
+### 4.1 Add Secrets
 
-1. Откройте ваш репозиторий на GitHub
+1. Open your repository on GitHub
 2. **Settings** → **Secrets and variables** → **Actions**
-3. Нажмите **New repository secret**
+3. Click **New repository secret**
 
-### 4.2 Секрет с Role ARN
+### 4.2 Role ARN Secret
 
 **Name**:
 ```text
@@ -243,11 +243,11 @@ AWS_ROLE_TO_ASSUME
 arn:aws:iam::YOUR_ACCOUNT_ID:role/GitHubActionsBedrockRole
 ```
 
-(вставьте ваш реальный ARN из предыдущего шага)
+(paste your actual ARN from the previous step)
 
-Нажмите **Add secret**
+Click **Add secret**
 
-### 4.3 Секрет с регионом (опционально)
+### 4.3 Region Secret (Optional)
 
 **Name**:
 ```text
@@ -259,154 +259,154 @@ AWS_REGION
 eu-north-1
 ```
 
-Нажмите **Add secret**
+Click **Add secret**
 
-### 4.4 GitHub App credentials (если используете)
+### 4.4 GitHub App Credentials (If Using)
 
-Если используете собственное GitHub App:
+If using a custom GitHub App:
 
 **Name**: `APP_ID`
-**Secret**: ID вашего приложения
+**Secret**: Your application ID
 
 **Name**: `APP_PRIVATE_KEY`
-**Secret**: Содержимое .pem файла
+**Secret**: Contents of the .pem file
 
-## 📄 Шаг 5: Создание GitHub Workflow
+## 📄 Step 5: Create GitHub Workflow
 
-См. готовый workflow в файле: `.github/workflows/claude-bedrock-eu.yml`
+See the ready-made workflow in: `.github/workflows/claude-bedrock-eu.yml`
 
-Или используйте example: `examples/claude-bedrock-eu-oidc.yml`
+Or use the example: `examples/claude-bedrock-eu-oidc.yml`
 
-## ✅ Шаг 6: Тестирование
+## ✅ Step 6: Testing
 
-### 6.1 Создайте тестовый issue
+### 6.1 Create Test Issue
 
-1. В вашем репозитории создайте новый issue
-2. Напишите в описании:
+1. In your repository, create a new issue
+2. Write in the description:
 ```text
-@claude привет! Можешь ли ты помочь мне с настройкой AWS Bedrock?
+@claude hello! Can you help me set up AWS Bedrock?
 ```
 
-### 6.2 Проверьте workflow
+### 6.2 Check Workflow
 
-1. Перейдите на вкладку **Actions**
-2. Найдите запущенный workflow `Claude Code Action (Bedrock EU)`
-3. Откройте workflow run
-4. Проверьте логи:
-   - OIDC authentication успешен
-   - Claude отвечает на issue
+1. Go to the **Actions** tab
+2. Find the running workflow `Claude Code Action (Bedrock EU)`
+3. Open the workflow run
+4. Check the logs:
+   - OIDC authentication successful
+   - Claude responds to the issue
 
-### 6.3 Ожидаемый результат
+### 6.3 Expected Result
 
-Claude должен:
-- Успешно аутентифицироваться через OIDC
-- Подключиться к Bedrock в регионе eu-north-1
-- Ответить в комментарии к issue
+Claude should:
+- Successfully authenticate via OIDC
+- Connect to Bedrock in eu-north-1 region
+- Respond in the issue comments
 
 ## 🔍 Troubleshooting
 
-### Ошибка: "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+### Error: "Not authorized to perform sts:AssumeRoleWithWebIdentity"
 
-**Причина**: Trust policy не соответствует репозиторию/ветке
+**Cause**: Trust policy doesn't match repository/branch
 
-**Решение**:
-1. Проверьте Trust policy роли
-2. Убедитесь, что `token.actions.githubusercontent.com:sub` правильный
-3. Формат должен быть: `repo:OWNER/REPO:ref:refs/heads/BRANCH`
+**Solution**:
+1. Verify the role's Trust policy
+2. Ensure `token.actions.githubusercontent.com:sub` is correct
+3. Format should be: `repo:OWNER/REPO:ref:refs/heads/BRANCH`
 
-### Ошибка: "Access Denied" при вызове Bedrock
+### Error: "Access Denied" when calling Bedrock
 
-**Причина**: Недостаточно прав у роли
+**Cause**: Insufficient role permissions
 
-**Решение**:
-1. Проверьте, что политика `AmazonBedrockFullAccess` или custom policy присоединена к роли
-2. Убедитесь, что у вас есть доступ к моделям Claude в Bedrock
-3. Проверьте регион в workflow (должен быть `eu-north-1`)
+**Solution**:
+1. Verify that `AmazonBedrockFullAccess` or custom policy is attached to the role
+2. Ensure you have access to Claude models in Bedrock
+3. Check the region in workflow (should be `eu-north-1`)
 
-### Ошибка: "Model not found"
+### Error: "Model not found"
 
-**Причина**: Неправильный model ID для региона
+**Cause**: Incorrect model ID for region
 
-**Решение**:
-- Используйте model ID с префиксом региона: `eu.anthropic.claude-...`
-- Не используйте: `us.anthropic.claude-...` или без префикса
+**Solution**:
+- Use model ID with region prefix: `eu.anthropic.claude-...`
+- Don't use: `us.anthropic.claude-...` or without prefix
 
-### Ошибка: "Workflow doesn't trigger"
+### Error: "Workflow doesn't trigger"
 
-**Причина**: Неправильная конфигурация triggers
+**Cause**: Incorrect trigger configuration
 
-**Решение**:
-1. Проверьте, что workflow файл в `.github/workflows/`
-2. Проверьте синтаксис YAML
-3. Убедитесь, что используется `@claude` в комментарии
-4. Проверьте, что GitHub Actions включены в репозитории
+**Solution**:
+1. Verify workflow file is in `.github/workflows/`
+2. Check YAML syntax
+3. Ensure `@claude` is used in comments
+4. Verify GitHub Actions are enabled in the repository
 
-## 📊 Мониторинг и Логи
+## 📊 Monitoring and Logs
 
 ### CloudTrail
 
-Все вызовы к Bedrock логируются в CloudTrail:
+All Bedrock calls are logged in CloudTrail:
 
 1. AWS Console → CloudTrail → Event history
-2. Фильтры:
+2. Filters:
    - Event source: `bedrock.amazonaws.com`
-   - User name: Ваша GitHub роль
+   - User name: Your GitHub role
    - Region: eu-north-1
 
 ### Cost Monitoring
 
 1. AWS Console → Cost Explorer
-2. Фильтры:
+2. Filters:
    - Service: Amazon Bedrock
    - Region: EU (Stockholm)
-3. Настройте budget alerts
+3. Set up budget alerts
 
-## 🔒 Безопасность Best Practices
+## 🔒 Security Best Practices
 
-### 1. Минимальные права
+### 1. Minimal Permissions
 
-✅ Используйте custom policy вместо `AmazonBedrockFullAccess`
-✅ Ограничьте доступ только к необходимым моделям
-✅ Ограничьте доступ только к необходимым регионам
+✅ Use custom policy instead of `AmazonBedrockFullAccess`
+✅ Limit access to only necessary models
+✅ Limit access to only necessary regions
 
-### 2. Ограничение по репозиторию
+### 2. Repository Restrictions
 
-✅ В Trust policy указывайте конкретный репозиторий
-✅ Используйте ограничение по ветке (например, только main)
-❌ Не используйте wildcard `*:*` для всех репозиториев
+✅ Specify exact repository in Trust policy
+✅ Use branch restriction (e.g., only main)
+❌ Don't use wildcard `*:*` for all repositories
 
-### 3. Мониторинг
+### 3. Monitoring
 
-✅ Включите CloudTrail для всех регионов
-✅ Настройте алерты на необычную активность
-✅ Регулярно проверяйте логи доступа
+✅ Enable CloudTrail for all regions
+✅ Set up alerts for unusual activity
+✅ Regularly review access logs
 
-### 4. Ротация
+### 4. Rotation
 
-✅ OIDC токены автоматически ротируются (ничего не нужно делать!)
-✅ Регулярно проверяйте и обновляйте политики
-✅ Удаляйте неиспользуемые роли
+✅ OIDC tokens rotate automatically (nothing to do!)
+✅ Regularly review and update policies
+✅ Remove unused roles
 
-## 📚 Дополнительные ресурсы
+## 📚 Additional Resources
 
 - [AWS OIDC for GitHub Actions](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
 - [Amazon Bedrock User Guide](https://docs.aws.amazon.com/bedrock/)
 - [Claude Models in Bedrock](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock)
 - [IAM Best Practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 
-## ✅ Чеклист настройки
+## ✅ Setup Checklist
 
-Убедитесь, что выполнено:
+Ensure everything is complete:
 
-- [ ] Amazon Bedrock включен в eu-north-1
-- [ ] Доступ к моделям Claude запрошен и одобрен
-- [ ] OIDC Identity Provider создан
-- [ ] IAM Role с правильной Trust Policy создана
-- [ ] Минимальные необходимые права присвоены роли
-- [ ] Role ARN добавлен в GitHub Secrets
-- [ ] GitHub Workflow создан и настроен
-- [ ] Тестовый issue создан и Claude ответил успешно
-- [ ] CloudTrail логи проверены
-- [ ] Cost monitoring настроен
+- [ ] Amazon Bedrock enabled in eu-north-1
+- [ ] Access to Claude models requested and approved
+- [ ] OIDC Identity Provider created
+- [ ] IAM Role with correct Trust Policy created
+- [ ] Minimal necessary permissions assigned to role
+- [ ] Role ARN added to GitHub Secrets
+- [ ] GitHub Workflow created and configured
+- [ ] Test issue created and Claude responded successfully
+- [ ] CloudTrail logs verified
+- [ ] Cost monitoring configured
 
-**Поздравляем! Безопасная интеграция AWS Bedrock с OIDC настроена!** 🎉
+**Congratulations! Secure AWS Bedrock integration with OIDC is set up!** 🎉
