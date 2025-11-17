@@ -1,0 +1,108 @@
+// High-level Pseudocode for Claude Code GitHub Action Workflow
+
+// Main entry point of the GitHub Action
+FUNCTION main_github_action_entry_point()
+    // 1. Initialization and Configuration Loading
+    LOAD_GITHUB_ACTION_INPUTS() // prompt, claude_args, anthropic_api_key, github_token, etc.
+    LOAD_ENVIRONMENT_VARIABLES()
+    LOAD_CLAUDE_MD_CONFIG() // If CLAUDE.md exists in repository root
+    LOAD_MCP_CONFIG_FROM_FILE() // If .mcp.json exists in repository root
+
+    // 2. Determine Execution Mode (Interactive vs. Automation)
+    IF is_interactive_mode_trigger(github_event, trigger_phrase, prompt_input) THEN
+        SET_MODE(INTERACTIVE)
+        PARSE_INTERACTIVE_COMMAND(github_event_comment_body)
+    ELSE
+        SET_MODE(AUTOMATION)
+        USE_PROMPT_INPUT(prompt_input)
+    END IF
+
+    // 3. Setup Authentication for Claude API
+    IF use_aws_bedrock THEN
+        CONFIGURE_AWS_CREDENTIALS_VIA_OIDC()
+        SET_CLAUDE_PROVIDER(BEDROCK)
+    ELSE IF use_google_vertex_ai THEN
+        AUTHENTICATE_GCP_VIA_WORKLOAD_IDENTITY_FEDERATION()
+        SET_CLAUDE_PROVIDER(VERTEX_AI)
+    ELSE // Default to Direct Anthropic API
+        VALIDATE_ANTHROPIC_API_KEY(anthropic_api_key)
+        SET_CLAUDE_PROVIDER(ANTHROPIC_API)
+    END IF
+
+    // 4. Checkout Repository
+    CHECKOUT_REPOSITORY(github_token)
+
+    // 5. Initialize Claude Code Agent
+    INITIALIZE_CLAUDE_AGENT(claude_provider, claude_args, loaded_configs)
+
+    // 6. Setup Tool Permissions
+    PARSE_ALLOWED_TOOLS(claude_args_allowed_tools)
+    PARSE_DISALLOWED_TOOLS(claude_args_disallowed_tools)
+    REGISTER_BUILTIN_TOOLS() // Read, Write, Edit, Git, etc.
+    INITIALIZE_MCP_SERVERS(mcp_config) // Start custom MCP servers if configured
+    APPLY_TOOL_PERMISSIONS()
+
+    // 7. Execute Claude Agent
+    IF MODE == INTERACTIVE THEN
+        CREATE_PROGRESS_COMMENT_ON_GITHUB(github_token, "Claude is thinking...")
+        EXECUTE_CLAUDE_AGENT_INTERACTIVE(parsed_interactive_command)
+        PUBLISH_CLAUDE_RESPONSE_TO_GITHUB_COMMENT()
+    ELSE // AUTOMATION MODE
+        EXECUTE_CLAUDE_AGENT_AUTOMATION(prompt_input)
+        PUBLISH_CLAUDE_RESPONSE_TO_WORKFLOW_OUTPUT()
+        IF CLAUDE_AGENT_MADE_CHANGES() THEN
+            COMMIT_CHANGES_WITH_SIGNATURE()
+            CREATE_PULL_REQUEST_IF_NEEDED()
+        END IF
+    END IF
+
+    // 8. Handle Results and Errors
+    IF CLAUDE_AGENT_SUCCESS() THEN
+        LOG_SUCCESS()
+    ELSE
+        LOG_ERROR()
+        SET_ACTION_STATUS(FAILURE)
+    END IF
+
+END FUNCTION
+
+// Helper Function: is_interactive_mode_trigger
+FUNCTION is_interactive_mode_trigger(event, trigger_phrase, prompt_input) RETURNS BOOLEAN
+    IF event_is_comment_creation(event) AND comment_contains_phrase(event.comment.body, trigger_phrase) AND prompt_input IS EMPTY THEN
+        RETURN TRUE
+    ELSE
+        RETURN FALSE
+    END IF
+END FUNCTION
+
+// Helper Function: is_automation_mode_trigger
+FUNCTION is_automation_mode_trigger(prompt_input) RETURNS BOOLEAN
+    IF prompt_input IS NOT EMPTY THEN
+        RETURN TRUE
+    ELSE
+        RETURN FALSE
+    END IF
+END FUNCTION
+
+// Helper Function: create_progress_comment_on_github
+FUNCTION CREATE_PROGRESS_COMMENT_ON_GITHUB(token, message)
+    // Use GitHub API to create a comment on the relevant PR/Issue
+END FUNCTION
+
+// Helper Function: publish_claude_response_to_github_comment
+FUNCTION PUBLISH_CLAUDE_RESPONSE_TO_GITHUB_COMMENT()
+    // Use GitHub API to update the comment or add a new one with Claude's response
+END FUNCTION
+
+// Helper Function: commit_changes_with_signature
+FUNCTION COMMIT_CHANGES_WITH_SIGNATURE()
+    // Stage changes
+    // Commit with GPG signature (if configured) and co-authored-by trailer
+    // Push to repository
+END FUNCTION
+
+// Helper Function: create_pull_request_if_needed
+FUNCTION CREATE_PULL_REQUEST_IF_NEEDED()
+    // Check if changes were made and a new branch was created
+    // Use GitHub API to create a new pull request
+END FUNCTION
