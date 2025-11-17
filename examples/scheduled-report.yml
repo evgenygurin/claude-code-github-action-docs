@@ -1,0 +1,39 @@
+name: Daily Development Report
+
+on:
+  # Run every day at 9 AM UTC
+  schedule:
+    - cron: '0 9 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Daily Report
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          prompt: |
+            Generate a comprehensive daily development report including:
+            - Summary of yesterday's commits
+            - Open issues and their status
+            - Open pull requests requiring review
+            - Code quality metrics if available
+            Create an issue with this report.
+
+          claude_args: |
+            --max-turns 5
+            --model claude-opus-4-1-20250805
