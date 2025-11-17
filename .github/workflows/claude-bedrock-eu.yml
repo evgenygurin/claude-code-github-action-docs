@@ -1,0 +1,101 @@
+name: Claude Code Action (Bedrock EU)
+
+# This workflow uses AWS Bedrock in eu-north-1 region with OIDC authentication
+# More secure than long-lived credentials - uses temporary tokens
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+# Security: Explicitly set minimal required permissions
+permissions:
+  contents: write        # Required to modify repository files
+  pull-requests: write   # Required to create and update PRs
+  issues: write          # Required to respond to issues
+  id-token: write        # REQUIRED for OIDC authentication
+
+jobs:
+  claude-bedrock-eu:
+    # Only run if @claude is mentioned in comments
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+
+    runs-on: ubuntu-latest
+
+    # Prevent multiple Claude instances from running simultaneously
+    concurrency:
+      group: claude-bedrock-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+
+    # Security: Set timeout to prevent runaway costs
+    timeout-minutes: 30
+
+    # Environment variable for AWS region
+    env:
+      AWS_REGION: eu-north-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate GitHub App token (if using custom app)
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+        # If you don't have a custom GitHub App, comment out this step
+        # and remove the github_token parameter from Claude action below
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # ARN of the IAM role to assume (stored in GitHub Secrets)
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+          # AWS region for Bedrock
+          aws-region: eu-north-1
+
+          # Session name (visible in CloudTrail logs)
+          role-session-name: GitHubActions-Claude-${{ github.run_id }}
+
+          # Role duration (max 1 hour for security)
+          role-duration-seconds: 3600
+
+      - name: Verify AWS credentials
+        run: |
+          echo "✅ AWS credentials configured successfully"
+          echo "Region: $AWS_REGION"
+          echo "Session: GitHubActions-Claude-${{ github.run_id }}"
+          # Test AWS access (will fail if OIDC auth didn't work)
+          aws sts get-caller-identity
+
+      - name: Run Claude Code Action with Bedrock
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Use GitHub App token if available, otherwise defaults to GITHUB_TOKEN
+          github_token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+
+          # Enable AWS Bedrock integration
+          use_bedrock: "true"
+
+          # Configure Claude for EU region
+          claude_args: |
+            --model eu.anthropic.claude-3-5-sonnet-20241022-v2:0
+            --max-turns 10
+
+        # Environment variables for AWS
+        env:
+          AWS_REGION: eu-north-1
+          AWS_DEFAULT_REGION: eu-north-1
+
+      - name: Post-run cleanup
+        if: always()
+        run: |
+          echo "✅ Workflow completed"
+          echo "Check CloudTrail for Bedrock API calls"

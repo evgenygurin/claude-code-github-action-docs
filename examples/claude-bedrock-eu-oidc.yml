@@ -1,0 +1,103 @@
+# Example: Claude Code with AWS Bedrock (EU Region) using OIDC
+# Region: eu-north-1 (Stockholm)
+# Authentication: OIDC (Secure, temporary tokens)
+
+# 📋 Prerequisites:
+# 1. AWS Bedrock enabled in eu-north-1
+# 2. Claude model access granted
+# 3. OIDC Identity Provider configured in AWS
+# 4. IAM Role created with Bedrock permissions
+# 5. Role ARN added to GitHub Secrets as AWS_ROLE_TO_ASSUME
+# 6. (Optional) GitHub App credentials for custom bot user
+
+# 📚 Setup Guide: docs/aws-bedrock-oidc-setup.md
+
+name: Claude with AWS Bedrock EU (OIDC)
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write  # CRITICAL: Required for OIDC
+
+jobs:
+  claude-bedrock:
+    if: contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+
+    env:
+      AWS_REGION: eu-north-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Optional: If using custom GitHub App
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+        continue-on-error: true
+
+      # OIDC Authentication with AWS
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-north-1
+          role-session-name: GH-Actions-${{ github.run_id }}
+
+      # Run Claude with Bedrock
+      - name: Claude Code Action
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          use_bedrock: "true"
+          claude_args: |
+            --model eu.anthropic.claude-3-5-sonnet-20241022-v2:0
+            --max-turns 10
+
+# 🎯 Available Models in eu-north-1:
+# - eu.anthropic.claude-3-5-sonnet-20241022-v2:0 (Recommended)
+# - eu.anthropic.claude-3-5-haiku-20241022-v1:0
+# - eu.anthropic.claude-3-opus-20240229-v1:0
+
+# 🔐 Required GitHub Secrets:
+# - AWS_ROLE_TO_ASSUME: ARN of IAM role (arn:aws:iam::ACCOUNT:role/ROLE_NAME)
+# - APP_ID: (Optional) GitHub App ID
+# - APP_PRIVATE_KEY: (Optional) GitHub App private key
+
+# 🚀 To use this workflow:
+# 1. Copy to .github/workflows/ in your repo
+# 2. Complete AWS OIDC setup (see docs/aws-bedrock-oidc-setup.md)
+# 3. Add secrets to your repository
+# 4. Test with: @claude hello
+
+# 💡 Cost Optimization Tips:
+# - Use timeout-minutes to prevent runaway costs
+# - Set appropriate --max-turns limit
+# - Consider using Haiku model for simpler tasks
+# - Monitor costs in AWS Cost Explorer
+
+# 🔒 Security Best Practices:
+# - OIDC provides temporary credentials (auto-rotated)
+# - No long-lived AWS keys stored in GitHub
+# - Trust policy limits access to specific repo/branch
+# - CloudTrail logs all Bedrock API calls
+
+# 📊 Monitoring:
+# - CloudTrail: Monitor Bedrock API calls
+# - Cost Explorer: Track Bedrock usage costs
+# - GitHub Actions: View workflow logs
